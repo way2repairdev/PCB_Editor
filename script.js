@@ -8,6 +8,9 @@ class PCBFileEditor {
         this.netlistStartOffset = 0;
         this.netlistTotalSize = 0;
         this.debugLog = [];
+        this.jsonData = null;
+        this.jsonStartOffset = 0;
+        this.jsonEndOffset = 0;
         
         this.initializeUI();
     }
@@ -18,6 +21,8 @@ class PCBFileEditor {
         this.fileInput = document.getElementById('fileInput');
         this.saveFileBtn = document.getElementById('saveFileBtn');
         this.debugToggle = document.getElementById('debugToggle');
+        this.rawDataToggle = document.getElementById('rawDataToggle');
+        this.jsonDataToggle = document.getElementById('jsonDataToggle');
         this.fileInfo = document.getElementById('fileInfo');
         this.debugView = document.getElementById('debugView');
         this.regularView = document.getElementById('regularView');
@@ -29,18 +34,33 @@ class PCBFileEditor {
         this.hexViewer = document.getElementById('hexViewer');
         this.netlistOffset = document.getElementById('netlistOffset');
         this.netlistSize = document.getElementById('netlistSize');
+        this.netlistSection = document.querySelector('.netlist-section');
+        this.jsonSection = document.querySelector('.json-section');
+        this.partsBody = document.getElementById('partsBody');
+        this.jsonNetsBody = document.getElementById('jsonNetsBody');
+        this.jsonEditor = document.getElementById('jsonEditor');
+        this.formatJsonBtn = document.getElementById('formatJsonBtn');
+        this.validateJsonBtn = document.getElementById('validateJsonBtn');
+        this.saveJsonBtn = document.getElementById('saveJsonBtn');
 
         // Event listeners
         this.openFileBtn.addEventListener('click', () => this.fileInput.click());
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.saveFileBtn.addEventListener('click', () => this.saveFile());
         this.debugToggle.addEventListener('change', () => this.toggleView());
+        this.rawDataToggle.addEventListener('change', () => this.toggleRawDataView());
+        this.jsonDataToggle.addEventListener('change', () => this.toggleJsonDataView());
         this.clearLogBtn.addEventListener('click', () => this.clearDebugLog());
         this.showBytesBtn.addEventListener('click', () => this.showFirstBytes());
         this.reparseBtn.addEventListener('click', () => this.reparseNetlist());
+        this.formatJsonBtn.addEventListener('click', () => this.formatJson());
+        this.validateJsonBtn.addEventListener('click', () => this.validateJson());
+        this.saveJsonBtn.addEventListener('click', () => this.saveJsonChanges());
 
         // Initial state
         this.toggleView();
+        this.toggleRawDataView();
+        this.toggleJsonDataView();
     }
 
     addDebugLog(message, type = 'info') {
@@ -74,6 +94,20 @@ class PCBFileEditor {
         this.regularView.style.display = showDebug ? 'none' : 'block';
     }
 
+    toggleRawDataView() {
+        const showRawData = this.rawDataToggle.checked;
+        if (this.netlistSection) {
+            this.netlistSection.style.display = showRawData ? 'block' : 'none';
+        }
+    }
+
+    toggleJsonDataView() {
+        const showJsonData = this.jsonDataToggle.checked;
+        if (this.jsonSection) {
+            this.jsonSection.style.display = showJsonData ? 'block' : 'none';
+        }
+    }
+
     async handleFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -94,6 +128,7 @@ class PCBFileEditor {
             if (this.fileData.length > 0) {
                 this.addDebugLog('File loaded successfully, starting netlist parsing...', 'info');
                 this.parseNetlist();
+                this.parseJsonData();
                 // Enable save button once file is loaded (for testing)
                 this.saveFileBtn.disabled = false;
                 this.addDebugLog('Save button enabled for testing', 'info');
@@ -464,6 +499,11 @@ class PCBFileEditor {
             // Rebuild the netlist section
             newFileData = this.rebuildNetlistData(newFileData);
             
+            // Rebuild the JSON section if it exists
+            if (this.jsonData) {
+                newFileData = this.rebuildJsonData(newFileData);
+            }
+            
             this.addDebugLog(`Final file size: ${newFileData.length} bytes`, 'info');
             
             // Create download link
@@ -609,6 +649,378 @@ class PCBFileEditor {
         this.addDebugLog(`Netlist rebuilt with ${this.netlist.length} entries, total size: ${totalNetlistSize} bytes`, 'info');
         this.addDebugLog(`Final file size: ${newFileData.length} bytes`, 'info');
         
+        return newFileData;
+    }
+
+    // JSON Data Methods
+    parseJsonData() {
+        this.addDebugLog('=== Starting JSON data parsing ===', 'info');
+        
+        // Look for hex patterns: 
+        // 3D 3D 3D 50 43 42 B8 BD BC D3 0D (original)
+        // 3D 3D 3D 50 43 42 B8 BD BC D3 0A (alternative)
+        const jsonPatterns = [
+            [0x3D, 0x3D, 0x3D, 0x50, 0x43, 0x42, 0xB8, 0xBD, 0xBC, 0xD3, 0x0D],
+            [0x3D, 0x3D, 0x3D, 0x50, 0x43, 0x42, 0xB8, 0xBD, 0xBC, 0xD3, 0x0A]
+        ];
+        
+        let patternOffset = -1;
+        let foundPattern = null;
+        
+        for (let i = 0; i < jsonPatterns.length; i++) {
+            const pattern = jsonPatterns[i];
+            const offset = this.findHexPattern(this.fileData, pattern);
+            if (offset !== -1) {
+                patternOffset = offset;
+                foundPattern = pattern;
+                const variant = i === 0 ? '0D variant' : '0A variant';
+                this.addDebugLog(`JSON pattern found (${variant}) at offset: ${patternOffset} (0x${patternOffset.toString(16)})`, 'info');
+                break;
+            }
+        }
+        
+        if (patternOffset === -1) {
+            this.addDebugLog('JSON pattern not found in file (checked both 0D and 0A variants)', 'info');
+            this.jsonData = null;
+            return;
+        }
+        
+        this.jsonStartOffset = patternOffset + foundPattern.length;
+        
+        // Find the end of JSON data (look for next non-printable pattern or end of file)
+        this.jsonEndOffset = this.findJsonEnd(this.jsonStartOffset);
+        
+        const jsonLength = this.jsonEndOffset - this.jsonStartOffset;
+        this.addDebugLog(`JSON data length: ${jsonLength} bytes`, 'info');
+        
+        if (jsonLength <= 0) {
+            this.addDebugLog('No JSON data found after pattern', 'warning');
+            return;
+        }
+        
+        // Extract JSON data
+        const jsonBytes = this.fileData.slice(this.jsonStartOffset, this.jsonEndOffset);
+        let jsonString = '';
+        
+        try {
+            jsonString = new TextDecoder('utf-8').decode(jsonBytes);
+            this.jsonData = JSON.parse(jsonString);
+            this.addDebugLog('JSON data parsed successfully', 'info');
+            this.addDebugLog(`Found ${this.jsonData.part?.length || 0} parts and ${this.jsonData.net?.length || 0} nets`, 'info');
+            
+            this.updateJsonDisplay();
+        } catch (error) {
+            this.addDebugLog(`Error parsing JSON: ${error.message}`, 'error');
+            this.jsonData = null;
+        }
+    }
+
+    findHexPattern(data, pattern) {
+        for (let i = 0; i <= data.length - pattern.length; i++) {
+            let match = true;
+            for (let j = 0; j < pattern.length; j++) {
+                if (data[i + j] !== pattern[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return i;
+        }
+        return -1;
+    }
+
+    findJsonEnd(startOffset) {
+        // Look for the end of JSON data (find closing brace and check for non-printable bytes)
+        let braceCount = 0;
+        let inString = false;
+        let escaped = false;
+        
+        for (let i = startOffset; i < this.fileData.length; i++) {
+            const byte = this.fileData[i];
+            const char = String.fromCharCode(byte);
+            
+            if (!inString) {
+                if (char === '{') braceCount++;
+                else if (char === '}') {
+                    braceCount--;
+                    if (braceCount === 0) {
+                        return i + 1; // Include the closing brace
+                    }
+                }
+                else if (char === '"') inString = true;
+            } else {
+                if (!escaped && char === '"') inString = false;
+                escaped = !escaped && char === '\\';
+            }
+            
+            // If we encounter non-printable characters and braces are balanced, stop
+            if (braceCount === 0 && (byte < 0x20 || byte > 0x7E) && byte !== 0x0A && byte !== 0x0D && byte !== 0x09) {
+                return i;
+            }
+        }
+        
+        return this.fileData.length;
+    }
+
+    updateJsonDisplay() {
+        if (!this.jsonData) return;
+        
+        // Update JSON editor
+        this.jsonEditor.value = JSON.stringify(this.jsonData, null, 2);
+        
+        // Update parts table
+        this.updatePartsTable();
+        
+        // Update nets table
+        this.updateJsonNetsTable();
+    }
+
+    updatePartsTable() {
+        this.partsBody.innerHTML = '';
+        
+        if (!this.jsonData?.part) return;
+        
+        this.jsonData.part.forEach((part, index) => {
+            const row = document.createElement('tr');
+            const padsInfo = part.pad ? `${part.pad.length} pads` : 'No pads';
+            const partValue = part.value || ''; // Handle cases where value might not exist
+            
+            row.innerHTML = `
+                <td class="part-reference" data-index="${index}">
+                    <span class="part-reference-display">${part.reference}</span>
+                    <input class="part-reference-input" type="text" value="${part.reference}" style="display: none;">
+                </td>
+                <td class="part-value" data-index="${index}">
+                    <span class="part-value-display">${partValue}</span>
+                    <input class="part-value-input" type="text" value="${partValue}" style="display: none;">
+                </td>
+                <td class="part-alias" data-index="${index}">
+                    <span class="part-alias-display">${part.alias}</span>
+                    <input class="part-alias-input" type="text" value="${part.alias}" style="display: none;">
+                </td>
+                <td>${padsInfo}</td>
+                <td>
+                    <button class="btn-edit" onclick="pcbEditor.editPart(${index})">Edit</button>
+                    <button class="btn-edit save-btn" onclick="pcbEditor.savePart(${index})" style="display: none;">Save</button>
+                    <button class="btn-edit cancel-btn" onclick="pcbEditor.cancelEditPart(${index})" style="display: none;">Cancel</button>
+                </td>
+            `;
+            this.partsBody.appendChild(row);
+        });
+    }
+
+    updateJsonNetsTable() {
+        this.jsonNetsBody.innerHTML = '';
+        
+        if (!this.jsonData?.net) return;
+        
+        this.jsonData.net.forEach((net, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="json-net-name" data-index="${index}">
+                    <span class="json-net-name-display">${net.name}</span>
+                    <input class="json-net-name-input" type="text" value="${net.name}" style="display: none;">
+                </td>
+                <td class="json-net-alias" data-index="${index}">
+                    <span class="json-net-alias-display">${net.alias}</span>
+                    <input class="json-net-alias-input" type="text" value="${net.alias}" style="display: none;">
+                </td>
+                <td>
+                    <button class="btn-edit" onclick="pcbEditor.editJsonNet(${index})">Edit</button>
+                    <button class="btn-edit save-btn" onclick="pcbEditor.saveJsonNet(${index})" style="display: none;">Save</button>
+                    <button class="btn-edit cancel-btn" onclick="pcbEditor.cancelEditJsonNet(${index})" style="display: none;">Cancel</button>
+                </td>
+            `;
+            this.jsonNetsBody.appendChild(row);
+        });
+    }
+
+    // JSON Editing Methods
+    editPart(index) {
+        const referenceCell = document.querySelector(`[data-index="${index}"].part-reference`);
+        const valueCell = document.querySelector(`[data-index="${index}"].part-value`);
+        const aliasCell = document.querySelector(`[data-index="${index}"].part-alias`);
+        
+        this.toggleEditMode(referenceCell, true);
+        this.toggleEditMode(valueCell, true);
+        this.toggleEditMode(aliasCell, true);
+        this.toggleActionButtons(referenceCell, true);
+    }
+
+    savePart(index) {
+        const referenceCell = document.querySelector(`[data-index="${index}"].part-reference`);
+        const valueCell = document.querySelector(`[data-index="${index}"].part-value`);
+        const aliasCell = document.querySelector(`[data-index="${index}"].part-alias`);
+        
+        const newReference = referenceCell.querySelector('.part-reference-input').value;
+        const newValue = valueCell.querySelector('.part-value-input').value;
+        const newAlias = aliasCell.querySelector('.part-alias-input').value;
+        
+        this.jsonData.part[index].reference = newReference;
+        this.jsonData.part[index].value = newValue;
+        this.jsonData.part[index].alias = newAlias;
+        
+        this.toggleEditMode(referenceCell, false);
+        this.toggleEditMode(valueCell, false);
+        this.toggleEditMode(aliasCell, false);
+        this.toggleActionButtons(referenceCell, false);
+        
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+        this.addDebugLog(`Part ${index} updated: ${newReference} (${newValue}) -> ${newAlias}`, 'info');
+    }
+
+    cancelEditPart(index) {
+        const referenceCell = document.querySelector(`[data-index="${index}"].part-reference`);
+        const valueCell = document.querySelector(`[data-index="${index}"].part-value`);
+        const aliasCell = document.querySelector(`[data-index="${index}"].part-alias`);
+        
+        this.toggleEditMode(referenceCell, false);
+        this.toggleEditMode(valueCell, false);
+        this.toggleEditMode(aliasCell, false);
+        this.toggleActionButtons(referenceCell, false);
+    }
+
+    editJsonNet(index) {
+        const nameCell = document.querySelector(`[data-index="${index}"].json-net-name`);
+        const aliasCell = document.querySelector(`[data-index="${index}"].json-net-alias`);
+        
+        this.toggleEditMode(nameCell, true);
+        this.toggleEditMode(aliasCell, true);
+        this.toggleActionButtons(nameCell, true);
+    }
+
+    saveJsonNet(index) {
+        const nameCell = document.querySelector(`[data-index="${index}"].json-net-name`);
+        const aliasCell = document.querySelector(`[data-index="${index}"].json-net-alias`);
+        
+        const newName = nameCell.querySelector('.json-net-name-input').value;
+        const newAlias = aliasCell.querySelector('.json-net-alias-input').value;
+        
+        this.jsonData.net[index].name = newName;
+        this.jsonData.net[index].alias = newAlias;
+        
+        this.toggleEditMode(nameCell, false);
+        this.toggleEditMode(aliasCell, false);
+        this.toggleActionButtons(nameCell, false);
+        
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+        this.addDebugLog(`JSON Net ${index} updated: ${newName} -> ${newAlias}`, 'info');
+    }
+
+    cancelEditJsonNet(index) {
+        const nameCell = document.querySelector(`[data-index="${index}"].json-net-name`);
+        const aliasCell = document.querySelector(`[data-index="${index}"].json-net-alias`);
+        
+        this.toggleEditMode(nameCell, false);
+        this.toggleEditMode(aliasCell, false);
+        this.toggleActionButtons(nameCell, false);
+    }
+
+    toggleEditMode(cell, editMode) {
+        const display = cell.querySelector('[class$="-display"]');
+        const input = cell.querySelector('[class$="-input"]');
+        
+        if (editMode) {
+            display.style.display = 'none';
+            input.style.display = 'inline-block';
+            input.focus();
+            input.select();
+        } else {
+            display.style.display = 'inline-block';
+            input.style.display = 'none';
+            input.value = display.textContent; // Reset to original value
+        }
+    }
+
+    toggleActionButtons(cell, editMode) {
+        const row = cell.parentElement;
+        const editBtn = row.querySelector('.btn-edit:not(.save-btn):not(.cancel-btn)');
+        const saveBtn = row.querySelector('.save-btn');
+        const cancelBtn = row.querySelector('.cancel-btn');
+        
+        if (editMode) {
+            editBtn.style.display = 'none';
+            saveBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+        } else {
+            editBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+        }
+    }
+
+    // JSON Editor Methods
+    formatJson() {
+        try {
+            const jsonObj = JSON.parse(this.jsonEditor.value);
+            this.jsonEditor.value = JSON.stringify(jsonObj, null, 2);
+            this.addDebugLog('JSON formatted successfully', 'info');
+        } catch (error) {
+            this.addDebugLog(`JSON format error: ${error.message}`, 'error');
+        }
+    }
+
+    validateJson() {
+        try {
+            JSON.parse(this.jsonEditor.value);
+            this.addDebugLog('JSON is valid', 'info');
+        } catch (error) {
+            this.addDebugLog(`JSON validation error: ${error.message}`, 'error');
+        }
+    }
+
+    saveJsonChanges() {
+        try {
+            this.jsonData = JSON.parse(this.jsonEditor.value);
+            this.updateJsonDisplay();
+            this.saveFileBtn.disabled = false;
+            this.addDebugLog('JSON changes saved', 'info');
+        } catch (error) {
+            this.addDebugLog(`Error saving JSON changes: ${error.message}`, 'error');
+        }
+    }
+
+    rebuildJsonData(fileData) {
+        if (!this.jsonData || this.jsonStartOffset === 0) {
+            return fileData;
+        }
+        
+        this.addDebugLog('Rebuilding JSON data...', 'info');
+        
+        // Convert JSON object back to string (single line, no spaces)
+        const newJsonString = JSON.stringify(this.jsonData);
+        const newJsonBytes = new TextEncoder().encode(newJsonString);
+        
+        const originalJsonLength = this.jsonEndOffset - this.jsonStartOffset;
+        const sizeDifference = newJsonBytes.length - originalJsonLength;
+        
+        this.addDebugLog(`Original JSON size: ${originalJsonLength} bytes`, 'info');
+        this.addDebugLog(`New JSON size: ${newJsonBytes.length} bytes`, 'info');
+        this.addDebugLog(`Size difference: ${sizeDifference} bytes`, 'info');
+        this.addDebugLog(`JSON format: single line, no spaces`, 'info');
+        
+        // Create new file buffer with adjusted size
+        const newFileSize = fileData.length + sizeDifference;
+        const newFileData = new Uint8Array(newFileSize);
+        
+        // Copy data before JSON
+        newFileData.set(fileData.slice(0, this.jsonStartOffset));
+        
+        // Insert new JSON data
+        newFileData.set(newJsonBytes, this.jsonStartOffset);
+        
+        // Copy data after original JSON
+        if (this.jsonEndOffset < fileData.length) {
+            const remainingData = fileData.slice(this.jsonEndOffset);
+            newFileData.set(remainingData, this.jsonStartOffset + newJsonBytes.length);
+        }
+        
+        // Update JSON end offset for future operations
+        this.jsonEndOffset = this.jsonStartOffset + newJsonBytes.length;
+        
+        this.addDebugLog(`JSON data rebuilt successfully`, 'info');
         return newFileData;
     }
 }

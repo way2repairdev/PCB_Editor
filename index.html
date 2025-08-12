@@ -20,6 +20,18 @@
                 Show Debug Console
             </label>
             
+            <label class="checkbox-container">
+                <input type="checkbox" id="rawDataToggle" unchecked>
+                <span class="checkmark"></span>
+                Show RAW Netlist Data
+            </label>
+            
+            <label class="checkbox-container">
+                <input type="checkbox" id="jsonDataToggle" unchecked>
+                <span class="checkmark"></span>
+                Show JSON Data
+            </label>
+            
             <div class="file-info" id="fileInfo">
                 | No PCB file loaded
             </div>
@@ -53,7 +65,7 @@
                 </div>
 
                 <div class="netlist-section">
-                    <h3>Netlist Data:</h3>
+                    <h3>RAW Netlist Data:</h3>
                     <div class="table-container">
                         <table id="netlistTable" class="netlist-table">
                             <thead>
@@ -68,6 +80,55 @@
                                 <!-- Netlist entries will be populated here -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div class="json-section" style="display: none;">
+                    <h3>JSON Data:</h3>
+                    <div class="json-container">
+                        <h4>Parts:</h4>
+                        <div class="table-container">
+                            <table id="partsTable" class="json-table">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Value</th>
+                                        <th>Alias</th>
+                                        <th>Pads</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="partsBody">
+                                    <!-- Parts entries will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <h4>Nets:</h4>
+                        <div class="table-container">
+                            <table id="jsonNetsTable" class="json-table">
+                                <thead>
+                                    <tr>
+                                        <th>Net Name</th>
+                                        <th>Alias</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="jsonNetsBody">
+                                    <!-- JSON nets entries will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="json-raw-editor">
+                            <h4>Raw JSON Editor:</h4>
+                            <textarea id="jsonEditor" rows="20" cols="80" placeholder="JSON data will appear here..."></textarea>
+                            <div class="json-controls">
+                                <button id="formatJsonBtn" class="btn btn-secondary">Format JSON</button>
+                                <button id="validateJsonBtn" class="btn btn-secondary">Validate JSON</button>
+                                <button id="saveJsonBtn" class="btn btn-primary">Save JSON Changes</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
