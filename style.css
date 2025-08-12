@@ -48,6 +48,35 @@ body {
     background-color: #1177bb;
 }
 
+.btn-success {
+    background-color: #16825d;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #1a9268;
+}
+
+.btn-success:disabled {
+    background-color: #3a3a3a;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.btn-edit {
+    padding: 4px 8px;
+    font-size: 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.btn-edit:hover {
+    background-color: #5a6268;
+}
+
 .btn-secondary {
     background-color: #3c3c3c;
     color: white;

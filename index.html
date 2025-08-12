@@ -12,9 +12,10 @@
         <div class="toolbar">
             <button id="openFileBtn" class="btn btn-primary">Open PCB File</button>
             <input type="file" id="fileInput" accept=".pcb" style="display: none;">
+            <button id="saveFileBtn" class="btn btn-success" disabled>Save PCB File</button>
             
             <label class="checkbox-container">
-                <input type="checkbox" id="debugToggle" checked>
+                <input type="checkbox" id="debugToggle" unchecked>
                 <span class="checkmark"></span>
                 Show Debug Console
             </label>
@@ -60,6 +61,7 @@
                                     <th>Net Index</th>
                                     <th>Net Name</th>
                                     <th>Net Size</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="netlistBody">

@@ -16,6 +16,7 @@ class PCBFileEditor {
         // Get DOM elements
         this.openFileBtn = document.getElementById('openFileBtn');
         this.fileInput = document.getElementById('fileInput');
+        this.saveFileBtn = document.getElementById('saveFileBtn');
         this.debugToggle = document.getElementById('debugToggle');
         this.fileInfo = document.getElementById('fileInfo');
         this.debugView = document.getElementById('debugView');
@@ -32,6 +33,7 @@ class PCBFileEditor {
         // Event listeners
         this.openFileBtn.addEventListener('click', () => this.fileInput.click());
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+        this.saveFileBtn.addEventListener('click', () => this.saveFile());
         this.debugToggle.addEventListener('change', () => this.toggleView());
         this.clearLogBtn.addEventListener('click', () => this.clearDebugLog());
         this.showBytesBtn.addEventListener('click', () => this.showFirstBytes());
@@ -92,6 +94,9 @@ class PCBFileEditor {
             if (this.fileData.length > 0) {
                 this.addDebugLog('File loaded successfully, starting netlist parsing...', 'info');
                 this.parseNetlist();
+                // Enable save button once file is loaded (for testing)
+                this.saveFileBtn.disabled = false;
+                this.addDebugLog('Save button enabled for testing', 'info');
             } else {
                 this.addDebugLog('Error: File loading failed', 'error');
             }
@@ -216,8 +221,8 @@ class PCBFileEditor {
                     netName = String.fromCharCode(...nameBytes.filter(b => b > 0 && b < 128));
                 }
                 
-                // Remove null terminators and control characters
-                netName = netName.replace(/[\x00-\x1F\x7F-\x9F]/g, '').trim();
+                // Remove only null terminators and control characters (but keep spaces)
+                netName = netName.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
                 
                 this.addDebugLog(`Entry ${entryCount} - Net name: '${netName}' (${nameSize} bytes)`, 'info');
             }
@@ -261,12 +266,20 @@ class PCBFileEditor {
     updateNetlistTable() {
         this.netlistBody.innerHTML = '';
         
-        this.netlist.forEach(entry => {
+        this.netlist.forEach((entry, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${entry.netIndex}</td>
-                <td>${entry.netName}</td>
+                <td class="net-name-cell" data-index="${index}">
+                    <span class="net-name-display">${entry.netName}</span>
+                    <input class="net-name-input" type="text" value="${entry.netName}" style="display: none;">
+                </td>
                 <td>${entry.netSize} bytes</td>
+                <td>
+                    <button class="btn-edit" onclick="pcbEditor.editNetName(${index})">Edit</button>
+                    <button class="btn-edit save-btn" onclick="pcbEditor.saveNetName(${index})" style="display: none;">Save</button>
+                    <button class="btn-edit cancel-btn" onclick="pcbEditor.cancelEdit(${index})" style="display: none;">Cancel</button>
+                </td>
             `;
             this.netlistBody.appendChild(row);
         });
@@ -369,9 +382,212 @@ class PCBFileEditor {
         this.addDebugLog('=== Reparsing netlist ===', 'info');
         this.parseNetlist();
     }
+
+    editNetName(index) {
+        const cell = document.querySelector(`[data-index="${index}"]`);
+        const display = cell.querySelector('.net-name-display');
+        const input = cell.querySelector('.net-name-input');
+        const editBtn = cell.parentElement.querySelector('.btn-edit:not(.save-btn):not(.cancel-btn)');
+        const saveBtn = cell.parentElement.querySelector('.save-btn');
+        const cancelBtn = cell.parentElement.querySelector('.cancel-btn');
+
+        display.style.display = 'none';
+        input.style.display = 'inline-block';
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.style.display = 'inline-block';
+        
+        input.focus();
+        input.select();
+    }
+
+    saveNetName(index) {
+        const cell = document.querySelector(`[data-index="${index}"]`);
+        const display = cell.querySelector('.net-name-display');
+        const input = cell.querySelector('.net-name-input');
+        const newName = input.value; // Don't trim - preserve spaces
+
+        if (newName === '') {
+            this.addDebugLog('Net name cannot be empty!', 'error');
+            return;
+        }
+
+        // Update the netlist data
+        const oldName = this.netlist[index].netName;
+        this.netlist[index].netName = newName;
+        
+        // Calculate new size: NET SIZE BYTE (4) + NET INDEX BYTE (4) + NET NAME BYTES
+        const newNetSize = 4 + 4 + newName.length; // size field + index field + name bytes
+        const oldNetSize = this.netlist[index].netSize;
+        this.netlist[index].netSize = newNetSize;
+
+        this.addDebugLog(`Net name changed from "${oldName}" to "${newName}"`, 'info');
+        this.addDebugLog(`Net size changed from ${oldNetSize} to ${newNetSize} bytes`, 'info');
+        
+        // Enable save button
+        this.saveFileBtn.disabled = false;
+        
+        this.cancelEdit(index);
+        this.updateNetlistTable();
+        this.updateFileDetails();
+    }
+
+    cancelEdit(index) {
+        const cell = document.querySelector(`[data-index="${index}"]`);
+        const display = cell.querySelector('.net-name-display');
+        const input = cell.querySelector('.net-name-input');
+        const editBtn = cell.parentElement.querySelector('.btn-edit:not(.save-btn):not(.cancel-btn)');
+        const saveBtn = cell.parentElement.querySelector('.save-btn');
+        const cancelBtn = cell.parentElement.querySelector('.cancel-btn');
+
+        // Reset input to original value
+        input.value = this.netlist[index].netName;
+
+        display.style.display = 'inline-block';
+        input.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+    }
+
+    saveFile() {
+        this.addDebugLog('Save button clicked!', 'info');
+        
+        if (!this.fileData) {
+            this.addDebugLog('No file loaded to save!', 'error');
+            return;
+        }
+
+        if (this.saveFileBtn.disabled) {
+            this.addDebugLog('Save button is disabled!', 'warning');
+            return;
+        }
+
+        this.addDebugLog('=== Starting file save process ===', 'info');
+        
+        try {
+            // Create a copy of the original file data
+            let newFileData = new Uint8Array(this.fileData);
+            this.addDebugLog(`Original file size: ${this.fileData.length} bytes`, 'info');
+            
+            // Rebuild the netlist section
+            newFileData = this.rebuildNetlistData(newFileData);
+            
+            this.addDebugLog(`Final file size: ${newFileData.length} bytes`, 'info');
+            
+            // Create download link
+            const blob = new Blob([newFileData], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = this.fileName || 'modified.pcb';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.addDebugLog('File saved successfully!', 'info');
+            this.saveFileBtn.disabled = true;
+            
+        } catch (error) {
+            this.addDebugLog(`Error saving file: ${error.message}`, 'error');
+        }
+    }
+
+    rebuildNetlistData(fileData) {
+        this.addDebugLog('Rebuilding netlist data...', 'info');
+        
+        // Calculate new netlist data
+        let netlistData = new Uint8Array();
+        let totalNetlistSize = 4; // Start with 4 bytes for total size
+        
+        // Build each net entry
+        for (const net of this.netlist) {
+            const nameBytes = new TextEncoder().encode(net.netName);
+            // NET SIZE = NET SIZE BYTE (4) + NET INDEX BYTE (4) + NET NAME BYTES
+            const netSize = 4 + 4 + nameBytes.length;
+            const entrySize = netSize; // The net size already includes the size field itself
+            
+            const entryData = new Uint8Array(entrySize);
+            let offset = 0;
+            
+            // Write net size (4 bytes) - includes size field + index field + name bytes
+            const sizeBytes = new Uint32Array([netSize]);
+            const sizeBytesArray = new Uint8Array(sizeBytes.buffer);
+            entryData.set(sizeBytesArray, offset);
+            offset += 4;
+            
+            // Write net index (4 bytes)
+            const indexBytes = new Uint32Array([net.netIndex]);
+            const indexBytesArray = new Uint8Array(indexBytes.buffer);
+            entryData.set(indexBytesArray, offset);
+            offset += 4;
+            
+            // Write net name
+            entryData.set(nameBytes, offset);
+            
+            // Append to netlist data
+            const newNetlistData = new Uint8Array(netlistData.length + entryData.length);
+            newNetlistData.set(netlistData);
+            newNetlistData.set(entryData, netlistData.length);
+            netlistData = newNetlistData;
+            
+            totalNetlistSize += entrySize;
+            
+            this.addDebugLog(`Net "${net.netName}": size=${netSize}, entry_size=${entrySize}`, 'debug');
+        }
+        
+        this.addDebugLog(`Total new netlist size: ${totalNetlistSize} bytes`, 'info');
+        this.addDebugLog(`Original netlist size: ${this.netlistTotalSize} bytes`, 'info');
+        
+        // Get netlist data start position
+        const netlistDataStart = this.netlistStartOffset + 32;
+        const originalNetlistEnd = netlistDataStart + this.netlistTotalSize;
+        this.addDebugLog(`Netlist data starts at offset: ${netlistDataStart}`, 'info');
+        this.addDebugLog(`Original netlist ends at offset: ${originalNetlistEnd}`, 'info');
+        
+        // Calculate size difference
+        const sizeDifference = totalNetlistSize - this.netlistTotalSize;
+        this.addDebugLog(`Size difference: ${sizeDifference} bytes`, 'info');
+        
+        // Create new file with adjusted size
+        const newFileSize = fileData.length + sizeDifference;
+        this.addDebugLog(`New file size will be: ${newFileSize} bytes (was ${fileData.length})`, 'info');
+        
+        const newFileData = new Uint8Array(Math.max(newFileSize, netlistDataStart + totalNetlistSize));
+        
+        // Copy everything before the netlist data
+        newFileData.set(fileData.slice(0, netlistDataStart));
+        this.addDebugLog(`Copied ${netlistDataStart} bytes before netlist`, 'info');
+        
+        // Update total netlist size in the file
+        const totalSizeBytes = new Uint32Array([totalNetlistSize]);
+        const totalSizeBytesArray = new Uint8Array(totalSizeBytes.buffer);
+        newFileData.set(totalSizeBytesArray, netlistDataStart);
+        
+        // Insert new netlist data
+        newFileData.set(netlistData, netlistDataStart + 4);
+        this.addDebugLog(`Inserted ${netlistData.length} bytes of netlist data`, 'info');
+        
+        // Copy everything after the original netlist data (if any)
+        if (originalNetlistEnd < fileData.length) {
+            const remainingData = fileData.slice(originalNetlistEnd);
+            const newOffset = netlistDataStart + totalNetlistSize;
+            newFileData.set(remainingData, newOffset);
+            this.addDebugLog(`Copied ${remainingData.length} bytes after netlist to offset ${newOffset}`, 'info');
+        }
+        
+        // Update our internal size tracking
+        this.netlistTotalSize = totalNetlistSize;
+        
+        this.addDebugLog(`Netlist rebuilt with ${this.netlist.length} entries, total size: ${totalNetlistSize} bytes`, 'info');
+        this.addDebugLog(`Final file size: ${newFileData.length} bytes`, 'info');
+        
+        return newFileData;
+    }
 }
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new PCBFileEditor();
+    window.pcbEditor = new PCBFileEditor();
 });
