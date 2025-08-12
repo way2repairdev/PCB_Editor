@@ -1,0 +1,290 @@
+/* PCB File Editor Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1e1e1e;
+    color: #ffffff;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Toolbar Styles */
+.toolbar {
+    background-color: #2d2d30;
+    padding: 10px 15px;
+    border-bottom: 1px solid #3e3e42;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #0e639c;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1177bb;
+}
+
+.btn-secondary {
+    background-color: #3c3c3c;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #4c4c4c;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    gap: 8px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.file-info {
+    color: #cccccc;
+    font-size: 14px;
+    margin-left: auto;
+}
+
+/* Main Content Styles */
+.main-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Debug View Styles */
+.debug-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+.debug-header h3 {
+    color: #ffffff;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.debug-console {
+    flex: 1;
+    background-color: #0c0c0c;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+    padding: 10px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 15px;
+}
+
+.debug-message {
+    color: #ffffff;
+    margin-bottom: 2px;
+    white-space: pre-wrap;
+}
+
+.debug-message.error {
+    color: #f48771;
+}
+
+.debug-message.warning {
+    color: #dcdcaa;
+}
+
+.debug-message.info {
+    color: #9cdcfe;
+}
+
+.debug-controls {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* Regular View Styles */
+.regular-view {
+    height: 100%;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.file-details {
+    background-color: #2d2d30;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.file-details p {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.netlist-section {
+    margin-bottom: 20px;
+}
+
+.netlist-section h3 {
+    margin-bottom: 10px;
+    color: #ffffff;
+}
+
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+}
+
+.netlist-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1e1e1e;
+}
+
+.netlist-table th {
+    background-color: #2d2d30;
+    color: #ffffff;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #3e3e42;
+    position: sticky;
+    top: 0;
+}
+
+.netlist-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2d2d30;
+    color: #cccccc;
+}
+
+.netlist-table tr:nth-child(even) {
+    background-color: #252526;
+}
+
+.netlist-table tr:hover {
+    background-color: #2a2d2e;
+}
+
+/* Hex Section Styles */
+.hex-section {
+    margin-top: 20px;
+}
+
+.hex-section details summary {
+    cursor: pointer;
+    padding: 10px;
+    background-color: #2d2d30;
+    border-radius: 4px;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.hex-section details summary:hover {
+    background-color: #3c3c3c;
+}
+
+.hex-viewer {
+    background-color: #0c0c0c;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.hex-line {
+    display: flex;
+    margin-bottom: 2px;
+}
+
+.hex-address {
+    color: #9cdcfe;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.hex-bytes {
+    color: #dcdcaa;
+    width: 400px;
+    flex-shrink: 0;
+}
+
+.hex-ascii {
+    color: #cccccc;
+    margin-left: 20px;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #525252;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .debug-controls {
+        flex-wrap: wrap;
+    }
+    
+    .file-info {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 10px;
+    }
+}

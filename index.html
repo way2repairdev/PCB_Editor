@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCB File Editor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Toolbar -->
+        <div class="toolbar">
+            <button id="openFileBtn" class="btn btn-primary">Open PCB File</button>
+            <input type="file" id="fileInput" accept=".pcb" style="display: none;">
+            
+            <label class="checkbox-container">
+                <input type="checkbox" id="debugToggle" checked>
+                <span class="checkmark"></span>
+                Show Debug Console
+            </label>
+            
+            <div class="file-info" id="fileInfo">
+                | No PCB file loaded
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Debug Console View -->
+            <div id="debugView" class="debug-view">
+                <div class="debug-header">
+                    <h3>Debug Console (Full Screen)</h3>
+                </div>
+                
+                <div class="debug-console" id="debugConsole">
+                    <div class="debug-message">Ready to load PCB file...</div>
+                </div>
+                
+                <div class="debug-controls">
+                    <button id="clearLogBtn" class="btn btn-secondary">Clear Debug Log</button>
+                    <button id="showBytesBtn" class="btn btn-secondary">Show First 50 Bytes</button>
+                    <button id="reparseBtn" class="btn btn-secondary">Reparse Netlist</button>
+                </div>
+            </div>
+
+            <!-- Regular View -->
+            <div id="regularView" class="regular-view" style="display: none;">
+                <div class="file-details" id="fileDetails">
+                    <p>File Details:</p>
+                    <p id="netlistOffset">Netlist Start Offset: 0</p>
+                    <p id="netlistSize">Netlist Total Size: 0 bytes</p>
+                </div>
+
+                <div class="netlist-section">
+                    <h3>Netlist Data:</h3>
+                    <div class="table-container">
+                        <table id="netlistTable" class="netlist-table">
+                            <thead>
+                                <tr>
+                                    <th>Net Index</th>
+                                    <th>Net Name</th>
+                                    <th>Net Size</th>
+                                </tr>
+                            </thead>
+                            <tbody id="netlistBody">
+                                <!-- Netlist entries will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="hex-section">
+                    <details>
+                        <summary>Raw Hex Data</summary>
+                        <div class="hex-viewer" id="hexViewer">
+                            <!-- Hex data will be populated here -->
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
