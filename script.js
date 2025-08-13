@@ -1327,7 +1327,7 @@ class PCBFileEditor {
             return; // User cancelled
         }
 
-        const padAlias = prompt('Enter pad alias:', `A${part.pad.length + 1}`);
+        const padAlias = prompt('Enter pad alias:', '');
         if (padAlias === null) {
             return; // User cancelled
         }
@@ -1340,7 +1340,7 @@ class PCBFileEditor {
         // Create new pad with entered values
         const newPad = {
             name: padName || `${part.pad.length + 1}`,
-            alias: padAlias || `A${part.pad.length + 1}`,
+            alias: padAlias || '',
             diode: diodeReading || "0"
         };
 
