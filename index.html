@@ -12,7 +12,7 @@
         <div class="toolbar">
             <button id="openFileBtn" class="btn btn-primary">Open PCB File</button>
             <input type="file" id="fileInput" accept=".pcb" style="display: none;">
-            <button id="saveFileBtn" class="btn btn-success" disabled>Save PCB File</button>
+            <button id="saveFileBtn" class="btn btn-success" disabled title="Save file directly (Chrome/Edge) or download">Save PCB File</button>
             
             <label class="checkbox-container">
                 <input type="checkbox" id="debugToggle" unchecked>
@@ -87,6 +87,9 @@
                     <h3>JSON Data:</h3>
                     <div class="json-container">
                         <h4>Parts:</h4>
+                        <div class="management-controls">
+                            <button class="btn-manage" onclick="pcbEditor.addPart()">Add Part</button>
+                        </div>
                         <div class="table-container">
                             <table id="partsTable" class="json-table">
                                 <thead>
@@ -95,6 +98,11 @@
                                         <th>Value</th>
                                         <th>Alias</th>
                                         <th>Pads</th>
+                                        <th>Pad Selection</th>
+                                        <th>Pad Name</th>
+                                        <th>Pad Alias</th>
+                                        <th>Diode Reading</th>
+                                        <th>Pad Management</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -105,6 +113,9 @@
                         </div>
                         
                         <h4>Nets:</h4>
+                        <div class="management-controls">
+                            <button class="btn-manage" onclick="pcbEditor.addJsonNet()">Add Net</button>
+                        </div>
                         <div class="table-container">
                             <table id="jsonNetsTable" class="json-table">
                                 <thead>

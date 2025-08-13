@@ -77,6 +77,16 @@ body {
     background-color: #5a6268;
 }
 
+.btn-edit.btn-delete-row {
+    background-color: #5a2d2d;
+    color: #ff9090;
+    margin-left: 5px;
+}
+
+.btn-edit.btn-delete-row:hover {
+    background-color: #6a3d3d;
+}
+
 .btn-secondary {
     background-color: #3c3c3c;
     color: white;
@@ -298,6 +308,239 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #525252;
+}
+
+/* Pad Selector and Diode Reading Styles */
+.pad-selector {
+    background-color: #2d2d30;
+    color: #ffffff;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 120px;
+    cursor: pointer;
+}
+
+.pad-selector:hover {
+    background-color: #404040;
+}
+
+.pad-selector:focus {
+    outline: none;
+    border-color: #0e639c;
+    box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
+}
+
+.diode-reading {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #2d4a2d;
+    color: #90ee90;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 80px;
+    text-align: center;
+    border: 1px solid #4a6b4a;
+}
+
+.diode-reading:empty::before {
+    content: '-';
+    color: #888;
+}
+
+.diode-reading-cell {
+    position: relative;
+}
+
+.diode-reading-display {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #2d4a2d;
+    color: #90ee90;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 80px;
+    text-align: center;
+    border: 1px solid #4a6b4a;
+}
+
+.diode-reading-input {
+    padding: 4px 8px;
+    background-color: #2d2d30;
+    color: #ffffff;
+    border: 1px solid #0e639c;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 80px;
+    text-align: center;
+}
+
+.diode-reading-input:focus {
+    outline: none;
+    border-color: #1177bb;
+    box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
+}
+
+/* Pad Name Styles */
+.pad-name-cell {
+    position: relative;
+}
+
+.pad-name-display {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #2d3a2d;
+    color: #b0d0b0;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 60px;
+    text-align: center;
+    border: 1px solid #4a5a4a;
+}
+
+.pad-name-input {
+    padding: 4px 8px;
+    background-color: #2d2d30;
+    color: #ffffff;
+    border: 1px solid #0e639c;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.pad-name-input:focus {
+    outline: none;
+    border-color: #1177bb;
+    box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
+}
+
+/* Pad Alias Styles */
+.pad-alias-cell {
+    position: relative;
+}
+
+.pad-alias-display {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #3a2d3a;
+    color: #d0b0d0;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 60px;
+    text-align: center;
+    border: 1px solid #5a4a5a;
+}
+
+.pad-alias-input {
+    padding: 4px 8px;
+    background-color: #2d2d30;
+    color: #ffffff;
+    border: 1px solid #0e639c;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.pad-alias-input:focus {
+    outline: none;
+    border-color: #1177bb;
+    box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
+}
+
+/* Pad Management Button Styles */
+.btn-pad {
+    padding: 4px 8px;
+    margin: 2px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background-color 0.2s;
+}
+
+.btn-pad:first-child {
+    background-color: #2d5a2d;
+    color: #90ee90;
+}
+
+.btn-pad:first-child:hover {
+    background-color: #3d6a3d;
+}
+
+.btn-pad:last-child {
+    background-color: #5a2d2d;
+    color: #ff9090;
+}
+
+.btn-pad:last-child:hover {
+    background-color: #6a3d3d;
+}
+
+.btn-pad:disabled {
+    background-color: #404040;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.btn-pad:disabled:hover {
+    background-color: #404040;
+}
+
+/* Management Controls Styles */
+.management-controls {
+    margin: 10px 0;
+    padding: 8px;
+    background-color: #2d2d30;
+    border-radius: 4px;
+    border: 1px solid #3e3e42;
+}
+
+.btn-manage {
+    padding: 6px 12px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+.btn-manage:first-child {
+    background-color: #2d5a2d;
+    color: #90ee90;
+}
+
+.btn-manage:first-child:hover {
+    background-color: #3d6a3d;
+}
+
+.btn-manage.btn-delete {
+    background-color: #5a2d2d;
+    color: #ff9090;
+}
+
+.btn-manage.btn-delete:hover {
+    background-color: #6a3d3d;
+}
+
+.btn-manage:disabled {
+    background-color: #404040;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.btn-manage:disabled:hover {
+    background-color: #404040;
 }
 
 /* Responsive Design */

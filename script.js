@@ -4,6 +4,8 @@ class PCBFileEditor {
         this.fileData = null;
         this.fileName = '';
         this.fileSize = 0;
+        this.fileHandle = null; // Store file handle for direct saving
+        this.lastDirectory = null; // Store last used directory
         this.netlist = [];
         this.netlistStartOffset = 0;
         this.netlistTotalSize = 0;
@@ -44,7 +46,7 @@ class PCBFileEditor {
         this.saveJsonBtn = document.getElementById('saveJsonBtn');
 
         // Event listeners
-        this.openFileBtn.addEventListener('click', () => this.fileInput.click());
+        this.openFileBtn.addEventListener('click', () => this.openFileDialog());
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.saveFileBtn.addEventListener('click', () => this.saveFile());
         this.debugToggle.addEventListener('change', () => this.toggleView());
@@ -108,10 +110,53 @@ class PCBFileEditor {
         }
     }
 
+    async openFileDialog() {
+        if ('showOpenFilePicker' in window) {
+            try {
+                const options = {
+                    types: [{
+                        description: 'PCB files',
+                        accept: {
+                            'application/octet-stream': ['.pcb']
+                        }
+                    }],
+                    multiple: false
+                };
+
+                // Use last directory if available
+                if (this.lastDirectory) {
+                    options.startIn = this.lastDirectory;
+                }
+
+                const [fileHandle] = await window.showOpenFilePicker(options);
+                this.fileHandle = fileHandle;
+                this.lastDirectory = fileHandle;
+
+                const file = await fileHandle.getFile();
+                await this.processFile(file);
+                
+                this.addDebugLog('File opened using File System Access API with directory persistence', 'info');
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    this.addDebugLog(`Error opening file: ${error.message}`, 'error');
+                    // Fallback to traditional file input
+                    this.fileInput.click();
+                }
+            }
+        } else {
+            this.addDebugLog('File System Access API not supported, falling back to traditional file input', 'info');
+            this.fileInput.click();
+        }
+    }
+
     async handleFileSelect(event) {
         const file = event.target.files[0];
         if (!file) return;
 
+        await this.processFile(file);
+    }
+
+    async processFile(file) {
         this.fileName = file.name;
         this.fileSize = file.size;
         
@@ -506,23 +551,86 @@ class PCBFileEditor {
             
             this.addDebugLog(`Final file size: ${newFileData.length} bytes`, 'info');
             
-            // Create download link
-            const blob = new Blob([newFileData], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = this.fileName || 'modified.pcb';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            this.addDebugLog('File saved successfully!', 'info');
-            this.saveFileBtn.disabled = true;
+            // Try to save directly, fallback to download
+            this.saveFileDirectly(newFileData);
             
         } catch (error) {
-            this.addDebugLog(`Error saving file: ${error.message}`, 'error');
+            this.addDebugLog(`Error during save: ${error.message}`, 'error');
         }
+    }
+
+    async saveFileDirectly(fileData) {
+        // Check if File System Access API is supported
+        if ('showSaveFilePicker' in window) {
+            try {
+                this.addDebugLog('Using File System Access API for direct save', 'info');
+                
+                // Prepare save options with directory persistence
+                const saveOptions = {
+                    suggestedName: this.fileName || 'modified.pcb',
+                    types: [
+                        {
+                            description: 'PCB files',
+                            accept: {
+                                'application/octet-stream': ['.pcb'],
+                            },
+                        },
+                    ],
+                };
+
+                // Use last directory if available
+                if (this.lastDirectory) {
+                    saveOptions.startIn = this.lastDirectory;
+                    this.addDebugLog('Using saved directory for file picker', 'info');
+                }
+                
+                // Show save file picker
+                const fileHandle = await window.showSaveFilePicker(saveOptions);
+
+                // Update last directory for future operations
+                this.lastDirectory = fileHandle;
+
+                // Create a writable stream
+                const writable = await fileHandle.createWritable();
+                
+                // Write the data
+                await writable.write(fileData);
+                
+                // Close the file
+                await writable.close();
+                
+                this.addDebugLog(`File saved directly to: ${fileHandle.name}`, 'info');
+                this.addDebugLog('Directory updated for future operations', 'info');
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    this.addDebugLog('Save operation cancelled by user', 'info');
+                } else {
+                    this.addDebugLog(`Direct save failed: ${error.message}`, 'warning');
+                    // Fallback to download
+                    this.downloadFile(fileData);
+                }
+            }
+        } else {
+            this.addDebugLog('File System Access API not supported, using download fallback', 'info');
+            // Fallback to download for unsupported browsers
+            this.downloadFile(fileData);
+        }
+    }
+
+    downloadFile(fileData) {
+        // Create download link (original method)
+        const blob = new Blob([fileData], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = this.fileName || 'modified.pcb';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.addDebugLog(`File downloaded as: ${this.fileName}`, 'info');
     }
 
     rebuildNetlistData(fileData) {
@@ -785,6 +893,15 @@ class PCBFileEditor {
             const padsInfo = part.pad ? `${part.pad.length} pads` : 'No pads';
             const partValue = part.value || ''; // Handle cases where value might not exist
             
+            // Create pad dropdown options
+            let padDropdownOptions = '<option value="">Select Pad</option>';
+            if (part.pad && part.pad.length > 0) {
+                part.pad.forEach((pad, padIndex) => {
+                    const padName = pad.name || `Pad ${padIndex + 1}`;
+                    padDropdownOptions += `<option value="${padIndex}">${padName}</option>`;
+                });
+            }
+            
             row.innerHTML = `
                 <td class="part-reference" data-index="${index}">
                     <span class="part-reference-display">${part.reference}</span>
@@ -800,9 +917,31 @@ class PCBFileEditor {
                 </td>
                 <td>${padsInfo}</td>
                 <td>
+                    <select class="pad-selector" onchange="pcbEditor.onPadSelected(${index}, this.value)">
+                        ${padDropdownOptions}
+                    </select>
+                </td>
+                <td class="pad-name-cell" data-index="${index}">
+                    <span class="pad-name-display">-</span>
+                    <input class="pad-name-input" type="text" value="" style="display: none;">
+                </td>
+                <td class="pad-alias-cell" data-index="${index}">
+                    <span class="pad-alias-display">-</span>
+                    <input class="pad-alias-input" type="text" value="" style="display: none;">
+                </td>
+                <td class="diode-reading-cell" data-index="${index}">
+                    <span class="diode-reading-display" id="diodeReading-${index}">-</span>
+                    <input class="diode-reading-input" type="text" value="" style="display: none;">
+                </td>
+                <td>
+                    <button class="btn-pad" onclick="pcbEditor.addPad(${index})">Add Pad</button>
+                    <button class="btn-pad" onclick="pcbEditor.deletePad(${index})" ${!part.pad || part.pad.length === 0 ? 'disabled' : ''}>Delete Pad</button>
+                </td>
+                <td>
                     <button class="btn-edit" onclick="pcbEditor.editPart(${index})">Edit</button>
                     <button class="btn-edit save-btn" onclick="pcbEditor.savePart(${index})" style="display: none;">Save</button>
                     <button class="btn-edit cancel-btn" onclick="pcbEditor.cancelEditPart(${index})" style="display: none;">Cancel</button>
+                    <button class="btn-edit btn-delete-row" onclick="pcbEditor.deletePartByIndex(${index})">Delete</button>
                 </td>
             `;
             this.partsBody.appendChild(row);
@@ -829,6 +968,7 @@ class PCBFileEditor {
                     <button class="btn-edit" onclick="pcbEditor.editJsonNet(${index})">Edit</button>
                     <button class="btn-edit save-btn" onclick="pcbEditor.saveJsonNet(${index})" style="display: none;">Save</button>
                     <button class="btn-edit cancel-btn" onclick="pcbEditor.cancelEditJsonNet(${index})" style="display: none;">Cancel</button>
+                    <button class="btn-edit btn-delete-row" onclick="pcbEditor.deleteJsonNetByIndex(${index})">Delete</button>
                 </td>
             `;
             this.jsonNetsBody.appendChild(row);
@@ -840,10 +980,16 @@ class PCBFileEditor {
         const referenceCell = document.querySelector(`[data-index="${index}"].part-reference`);
         const valueCell = document.querySelector(`[data-index="${index}"].part-value`);
         const aliasCell = document.querySelector(`[data-index="${index}"].part-alias`);
+        const padNameCell = document.querySelector(`[data-index="${index}"].pad-name-cell`);
+        const padAliasCell = document.querySelector(`[data-index="${index}"].pad-alias-cell`);
+        const diodeCell = document.querySelector(`[data-index="${index}"].diode-reading-cell`);
         
         this.toggleEditMode(referenceCell, true);
         this.toggleEditMode(valueCell, true);
         this.toggleEditMode(aliasCell, true);
+        this.toggleEditMode(padNameCell, true);
+        this.toggleEditMode(padAliasCell, true);
+        this.toggleEditMode(diodeCell, true);
         this.toggleActionButtons(referenceCell, true);
     }
 
@@ -851,18 +997,40 @@ class PCBFileEditor {
         const referenceCell = document.querySelector(`[data-index="${index}"].part-reference`);
         const valueCell = document.querySelector(`[data-index="${index}"].part-value`);
         const aliasCell = document.querySelector(`[data-index="${index}"].part-alias`);
+        const padNameCell = document.querySelector(`[data-index="${index}"].pad-name-cell`);
+        const padAliasCell = document.querySelector(`[data-index="${index}"].pad-alias-cell`);
+        const diodeCell = document.querySelector(`[data-index="${index}"].diode-reading-cell`);
         
         const newReference = referenceCell.querySelector('.part-reference-input').value;
         const newValue = valueCell.querySelector('.part-value-input').value;
         const newAlias = aliasCell.querySelector('.part-alias-input').value;
+        const newPadName = padNameCell.querySelector('.pad-name-input').value;
+        const newPadAlias = padAliasCell.querySelector('.pad-alias-input').value;
+        const newDiodeReading = diodeCell.querySelector('.diode-reading-input').value;
         
         this.jsonData.part[index].reference = newReference;
         this.jsonData.part[index].value = newValue;
         this.jsonData.part[index].alias = newAlias;
         
+        // Update pad name, alias, and diode reading for the currently selected pad
+        const row = referenceCell.closest('tr');
+        const padSelector = row.querySelector('select.pad-selector');
+        if (padSelector && padSelector.value !== '') {
+            const padIndex = parseInt(padSelector.value);
+            if (this.jsonData.part[index].pad && this.jsonData.part[index].pad[padIndex]) {
+                this.jsonData.part[index].pad[padIndex].name = newPadName;
+                this.jsonData.part[index].pad[padIndex].alias = newPadAlias;
+                this.jsonData.part[index].pad[padIndex].diode = newDiodeReading;
+                this.addDebugLog(`Updated pad ${padIndex}: Name="${newPadName}", Alias="${newPadAlias}", Diode="${newDiodeReading}"`, 'info');
+            }
+        }
+        
         this.toggleEditMode(referenceCell, false);
         this.toggleEditMode(valueCell, false);
         this.toggleEditMode(aliasCell, false);
+        this.toggleEditMode(padNameCell, false);
+        this.toggleEditMode(padAliasCell, false);
+        this.toggleEditMode(diodeCell, false);
         this.toggleActionButtons(referenceCell, false);
         
         this.updateJsonDisplay();
@@ -874,10 +1042,16 @@ class PCBFileEditor {
         const referenceCell = document.querySelector(`[data-index="${index}"].part-reference`);
         const valueCell = document.querySelector(`[data-index="${index}"].part-value`);
         const aliasCell = document.querySelector(`[data-index="${index}"].part-alias`);
+        const padNameCell = document.querySelector(`[data-index="${index}"].pad-name-cell`);
+        const padAliasCell = document.querySelector(`[data-index="${index}"].pad-alias-cell`);
+        const diodeCell = document.querySelector(`[data-index="${index}"].diode-reading-cell`);
         
         this.toggleEditMode(referenceCell, false);
         this.toggleEditMode(valueCell, false);
         this.toggleEditMode(aliasCell, false);
+        this.toggleEditMode(padNameCell, false);
+        this.toggleEditMode(padAliasCell, false);
+        this.toggleEditMode(diodeCell, false);
         this.toggleActionButtons(referenceCell, false);
     }
 
@@ -916,6 +1090,346 @@ class PCBFileEditor {
         this.toggleEditMode(nameCell, false);
         this.toggleEditMode(aliasCell, false);
         this.toggleActionButtons(nameCell, false);
+    }
+
+    // Pad Selection and Diode Reading Methods
+    onPadSelected(partIndex, padIndex) {
+        if (padIndex === '') {
+            // Clear pad name, alias, and diode reading if no pad selected
+            const padNameDisplay = document.querySelector(`[data-index="${partIndex}"].pad-name-cell .pad-name-display`);
+            const padNameInput = document.querySelector(`[data-index="${partIndex}"].pad-name-cell .pad-name-input`);
+            const padAliasDisplay = document.querySelector(`[data-index="${partIndex}"].pad-alias-cell .pad-alias-display`);
+            const padAliasInput = document.querySelector(`[data-index="${partIndex}"].pad-alias-cell .pad-alias-input`);
+            const diodeDisplay = document.getElementById(`diodeReading-${partIndex}`);
+            const diodeCell = document.querySelector(`[data-index="${partIndex}"].diode-reading-cell`);
+            
+            if (padNameDisplay) padNameDisplay.textContent = '-';
+            if (padNameInput) padNameInput.value = '';
+            if (padAliasDisplay) padAliasDisplay.textContent = '-';
+            if (padAliasInput) padAliasInput.value = '';
+            if (diodeDisplay) diodeDisplay.textContent = '-';
+            if (diodeCell) {
+                const input = diodeCell.querySelector('.diode-reading-input');
+                if (input) input.value = '';
+            }
+            return;
+        }
+
+        const part = this.jsonData.part[partIndex];
+        if (!part || !part.pad || !part.pad[padIndex]) {
+            this.addDebugLog(`Invalid pad selection: Part ${partIndex}, Pad ${padIndex}`, 'error');
+            return;
+        }
+
+        const selectedPad = part.pad[padIndex];
+        const padName = selectedPad.name || `Pad ${parseInt(padIndex) + 1}`;
+        const padAlias = selectedPad.alias || '';
+        
+        this.addDebugLog(`Selected pad: ${part.reference} - ${padName} (${padAlias})`, 'info');
+        
+        // Get diode reading for the selected pad
+        const diodeReading = this.getDiodeReading(selectedPad);
+        const diodeValue = selectedPad.diode || '';
+        
+        // Update the pad name display and input
+        const padNameDisplay = document.querySelector(`[data-index="${partIndex}"].pad-name-cell .pad-name-display`);
+        const padNameInput = document.querySelector(`[data-index="${partIndex}"].pad-name-cell .pad-name-input`);
+        
+        if (padNameDisplay) {
+            padNameDisplay.textContent = padName;
+        }
+        if (padNameInput) {
+            padNameInput.value = padName;
+        }
+        
+        // Update the pad alias display and input
+        const padAliasDisplay = document.querySelector(`[data-index="${partIndex}"].pad-alias-cell .pad-alias-display`);
+        const padAliasInput = document.querySelector(`[data-index="${partIndex}"].pad-alias-cell .pad-alias-input`);
+        
+        if (padAliasDisplay) {
+            padAliasDisplay.textContent = padAlias || '-';
+        }
+        if (padAliasInput) {
+            padAliasInput.value = padAlias;
+        }
+        
+        // Update the diode reading display
+        const diodeDisplay = document.getElementById(`diodeReading-${partIndex}`);
+        const diodeCell = document.querySelector(`[data-index="${partIndex}"].diode-reading-cell`);
+        
+        if (diodeDisplay) {
+            diodeDisplay.textContent = diodeReading;
+        }
+        
+        // Update the input field with the raw diode value for editing
+        if (diodeCell) {
+            const input = diodeCell.querySelector('.diode-reading-input');
+            if (input) {
+                input.value = diodeValue;
+            }
+        }
+        
+        this.addDebugLog(`Pad details - Name: ${padName}, Alias: ${padAlias}, Diode: ${diodeReading}`, 'info');
+    }
+
+    getDiodeReading(pad) {
+        // Check for the actual diode property format first
+        if (pad.diode !== undefined) {
+            return `${pad.diode}`;
+        }
+        
+        // Check for other possible diode reading properties
+        if (pad.diode_reading !== undefined) {
+            return `${pad.diode_reading}V`;
+        }
+        if (pad.diodeReading !== undefined) {
+            return `${pad.diodeReading}V`;
+        }
+        if (pad.voltage !== undefined) {
+            return `${pad.voltage}V`;
+        }
+        if (pad.reading !== undefined) {
+            return `${pad.reading}V`;
+        }
+        if (pad.test_voltage !== undefined) {
+            return `${pad.test_voltage}V`;
+        }
+        if (pad.testVoltage !== undefined) {
+            return `${pad.testVoltage}V`;
+        }
+        
+        // If no diode reading found, return a default message
+        return 'No reading';
+    }
+
+    // Pad Management Methods
+    addPad(partIndex) {
+        const part = this.jsonData.part[partIndex];
+        if (!part) {
+            this.addDebugLog(`Invalid part index: ${partIndex}`, 'error');
+            return;
+        }
+
+        // Initialize pad array if it doesn't exist
+        if (!part.pad) {
+            part.pad = [];
+        }
+
+        // Prompt for pad details
+        const padName = prompt('Enter pad name:', `${part.pad.length + 1}`);
+        if (padName === null) {
+            return; // User cancelled
+        }
+
+        const padAlias = prompt('Enter pad alias:', `A${part.pad.length + 1}`);
+        if (padAlias === null) {
+            return; // User cancelled
+        }
+
+        const diodeReading = prompt('Enter diode reading (numeric value):', '0');
+        if (diodeReading === null) {
+            return; // User cancelled
+        }
+
+        // Create new pad with entered values
+        const newPad = {
+            name: padName || `${part.pad.length + 1}`,
+            alias: padAlias || `A${part.pad.length + 1}`,
+            diode: diodeReading || "0"
+        };
+
+        part.pad.push(newPad);
+        
+        this.addDebugLog(`Added new pad to ${part.reference}: ${newPad.name} (${newPad.alias}) - ${newPad.diode}mV`, 'info');
+        
+        // Refresh the display
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+    }
+
+    deletePad(partIndex) {
+        const part = this.jsonData.part[partIndex];
+        if (!part || !part.pad || part.pad.length === 0) {
+            this.addDebugLog(`No pads to delete for part ${partIndex}`, 'warning');
+            alert('No pads available to delete.');
+            return;
+        }
+
+        // Get the currently selected pad from the dropdown
+        const row = document.querySelector(`[data-index="${partIndex}"].part-reference`).closest('tr');
+        const padSelector = row.querySelector('select.pad-selector');
+        let padToDelete = -1;
+
+        if (padSelector && padSelector.value !== '') {
+            padToDelete = parseInt(padSelector.value);
+        } else {
+            // If no pad is selected, ask user which pad to delete
+            const padOptions = part.pad.map((pad, index) => 
+                `${index}: ${pad.name || `Pad ${index + 1}`} (${pad.diode}mV)`
+            ).join('\n');
+            
+            const response = prompt(`Select pad to delete by entering its number:\n${padOptions}`);
+            if (response === null) {
+                return; // User cancelled
+            }
+            
+            padToDelete = parseInt(response);
+            if (isNaN(padToDelete) || padToDelete < 0 || padToDelete >= part.pad.length) {
+                alert('Invalid pad number.');
+                return;
+            }
+        }
+
+        const deletedPadName = part.pad[padToDelete].name || `Pad ${padToDelete + 1}`;
+        
+        // Confirm deletion
+        if (!confirm(`Delete pad "${deletedPadName}" from ${part.reference}?`)) {
+            return;
+        }
+        
+        // Remove the pad
+        part.pad.splice(padToDelete, 1);
+        
+        this.addDebugLog(`Deleted pad from ${part.reference}: ${deletedPadName}`, 'info');
+        
+        // Clear diode reading display
+        const diodeDisplay = document.getElementById(`diodeReading-${partIndex}`);
+        if (diodeDisplay) {
+            diodeDisplay.textContent = '-';
+        }
+        
+        // Refresh the display
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+    }
+
+    // Part Management Methods
+    addPart() {
+        if (!this.jsonData) {
+            this.addDebugLog('No JSON data available', 'error');
+            return;
+        }
+
+        // Initialize part array if it doesn't exist
+        if (!this.jsonData.part) {
+            this.jsonData.part = [];
+        }
+
+        // Prompt for part details
+        const reference = prompt('Enter part reference:', `U${this.jsonData.part.length + 1}`);
+        if (reference === null) {
+            return; // User cancelled
+        }
+
+        const value = prompt('Enter part value (optional):', '');
+        if (value === null) {
+            return; // User cancelled
+        }
+
+        const alias = prompt('Enter part alias:', `${reference.toLowerCase()}_alias`);
+        if (alias === null) {
+            return; // User cancelled
+        }
+
+        // Create new part with entered values
+        const newPart = {
+            reference: reference || `U${this.jsonData.part.length + 1}`,
+            value: value || '',
+            alias: alias || `${reference.toLowerCase()}_alias`,
+            pad: []
+        };
+
+        this.jsonData.part.push(newPart);
+        
+        this.addDebugLog(`Added new part: ${newPart.reference} (${newPart.value}) -> ${newPart.alias}`, 'info');
+        
+        // Refresh the display
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+    }
+
+    deletePartByIndex(partIndex) {
+        if (!this.jsonData || !this.jsonData.part || partIndex < 0 || partIndex >= this.jsonData.part.length) {
+            this.addDebugLog(`Invalid part index: ${partIndex}`, 'error');
+            return;
+        }
+
+        const partToDelete = this.jsonData.part[partIndex];
+        
+        // Confirm deletion
+        if (!confirm(`Delete part "${partToDelete.reference}" (${partToDelete.value || 'no value'})?`)) {
+            return;
+        }
+        
+        // Remove the part
+        this.jsonData.part.splice(partIndex, 1);
+        
+        this.addDebugLog(`Deleted part: ${partToDelete.reference}`, 'info');
+        
+        // Refresh the display
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+    }
+
+    // Net Management Methods
+    addJsonNet() {
+        if (!this.jsonData) {
+            this.addDebugLog('No JSON data available', 'error');
+            return;
+        }
+
+        // Initialize net array if it doesn't exist
+        if (!this.jsonData.net) {
+            this.jsonData.net = [];
+        }
+
+        // Prompt for net details
+        const netName = prompt('Enter net name:', `NET${this.jsonData.net.length + 1}`);
+        if (netName === null) {
+            return; // User cancelled
+        }
+
+        const alias = prompt('Enter net alias:', `${netName.toLowerCase()}_alias`);
+        if (alias === null) {
+            return; // User cancelled
+        }
+
+        // Create new net with entered values
+        const newNet = {
+            name: netName || `NET${this.jsonData.net.length + 1}`,
+            alias: alias || `${netName.toLowerCase()}_alias`
+        };
+
+        this.jsonData.net.push(newNet);
+        
+        this.addDebugLog(`Added new net: ${newNet.name} -> ${newNet.alias}`, 'info');
+        
+        // Refresh the display
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
+    }
+
+    deleteJsonNetByIndex(netIndex) {
+        if (!this.jsonData || !this.jsonData.net || netIndex < 0 || netIndex >= this.jsonData.net.length) {
+            this.addDebugLog(`Invalid net index: ${netIndex}`, 'error');
+            return;
+        }
+
+        const netToDelete = this.jsonData.net[netIndex];
+        
+        // Confirm deletion
+        if (!confirm(`Delete net "${netToDelete.name}" -> "${netToDelete.alias}"?`)) {
+            return;
+        }
+        
+        // Remove the net
+        this.jsonData.net.splice(netIndex, 1);
+        
+        this.addDebugLog(`Deleted net: ${netToDelete.name}`, 'info');
+        
+        // Refresh the display
+        this.updateJsonDisplay();
+        this.saveFileBtn.disabled = false;
     }
 
     toggleEditMode(cell, editMode) {
