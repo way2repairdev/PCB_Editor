@@ -32,6 +32,12 @@
                 Show JSON Data
             </label>
             
+            <label class="checkbox-container">
+                <input type="checkbox" id="rawJsonEditorToggle" unchecked>
+                <span class="checkmark"></span>
+                Show Raw JSON Editor
+            </label>
+            
             <div class="file-info" id="fileInfo">
                 | No PCB file loaded
             </div>
@@ -134,25 +140,18 @@
                             </table>
                         </div>
                         
-                        <div class="json-raw-editor">
-                            <h4>Raw JSON Editor:</h4>
-                            <textarea id="jsonEditor" rows="20" cols="80" placeholder="JSON data will appear here..."></textarea>
-                            <div class="json-controls">
-                                <button id="formatJsonBtn" class="btn btn-secondary">Format JSON</button>
-                                <button id="validateJsonBtn" class="btn btn-secondary">Validate JSON</button>
-                                <button id="saveJsonBtn" class="btn btn-primary">Save JSON Changes</button>
+                        <div class="json-raw-editor-section" style="display: none;">
+                            <div class="json-raw-editor">
+                                <h4>Raw JSON Editor:</h4>
+                                <textarea id="jsonEditor" rows="20" cols="80" placeholder="JSON data will appear here..."></textarea>
+                                <div class="json-controls">
+                                    <button id="formatJsonBtn" class="btn btn-secondary">Format JSON</button>
+                                    <button id="validateJsonBtn" class="btn btn-secondary">Validate JSON</button>
+                                    <button id="saveJsonBtn" class="btn btn-primary">Save JSON Changes</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="hex-section">
-                    <details>
-                        <summary>Raw Hex Data</summary>
-                        <div class="hex-viewer" id="hexViewer">
-                            <!-- Hex data will be populated here -->
-                        </div>
-                    </details>
                 </div>
             </div>
         </div>

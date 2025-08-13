@@ -25,6 +25,7 @@ class PCBFileEditor {
         this.debugToggle = document.getElementById('debugToggle');
         this.rawDataToggle = document.getElementById('rawDataToggle');
         this.jsonDataToggle = document.getElementById('jsonDataToggle');
+        this.rawJsonEditorToggle = document.getElementById('rawJsonEditorToggle');
         this.fileInfo = document.getElementById('fileInfo');
         this.debugView = document.getElementById('debugView');
         this.regularView = document.getElementById('regularView');
@@ -33,11 +34,11 @@ class PCBFileEditor {
         this.showBytesBtn = document.getElementById('showBytesBtn');
         this.reparseBtn = document.getElementById('reparseBtn');
         this.netlistBody = document.getElementById('netlistBody');
-        this.hexViewer = document.getElementById('hexViewer');
         this.netlistOffset = document.getElementById('netlistOffset');
         this.netlistSize = document.getElementById('netlistSize');
         this.netlistSection = document.querySelector('.netlist-section');
         this.jsonSection = document.querySelector('.json-section');
+        this.jsonRawEditorSection = document.querySelector('.json-raw-editor-section');
         this.partsBody = document.getElementById('partsBody');
         this.jsonNetsBody = document.getElementById('jsonNetsBody');
         this.jsonEditor = document.getElementById('jsonEditor');
@@ -53,6 +54,7 @@ class PCBFileEditor {
         this.debugToggle.addEventListener('change', () => this.toggleView());
         this.rawDataToggle.addEventListener('change', () => this.toggleRawDataView());
         this.jsonDataToggle.addEventListener('change', () => this.toggleJsonDataView());
+        this.rawJsonEditorToggle.addEventListener('change', () => this.toggleRawJsonEditorView());
         this.clearLogBtn.addEventListener('click', () => this.clearDebugLog());
         this.showBytesBtn.addEventListener('click', () => this.showFirstBytes());
         this.reparseBtn.addEventListener('click', () => this.reparseNetlist());
@@ -65,6 +67,7 @@ class PCBFileEditor {
         this.toggleView();
         this.toggleRawDataView();
         this.toggleJsonDataView();
+        this.toggleRawJsonEditorView();
     }
 
     addDebugLog(message, type = 'info') {
@@ -109,6 +112,13 @@ class PCBFileEditor {
         const showJsonData = this.jsonDataToggle.checked;
         if (this.jsonSection) {
             this.jsonSection.style.display = showJsonData ? 'block' : 'none';
+        }
+    }
+
+    toggleRawJsonEditorView() {
+        const showRawJsonEditor = this.rawJsonEditorToggle.checked;
+        if (this.jsonRawEditorSection) {
+            this.jsonRawEditorSection.style.display = showRawJsonEditor ? 'block' : 'none';
         }
     }
 
@@ -333,7 +343,6 @@ class PCBFileEditor {
         this.updateFileInfo();
         this.updateNetlistTable();
         this.updateFileDetails();
-        this.updateHexViewer();
     }
 
     updateNetlistTable() {
@@ -361,49 +370,6 @@ class PCBFileEditor {
     updateFileDetails() {
         this.netlistOffset.textContent = `Netlist Start Offset: ${this.netlistStartOffset}`;
         this.netlistSize.textContent = `Netlist Total Size: ${this.netlistTotalSize} bytes`;
-    }
-
-    updateHexViewer() {
-        if (!this.fileData) return;
-        
-        this.hexViewer.innerHTML = '';
-        
-        // Show first 256 bytes in hex format
-        const maxBytes = Math.min(256, this.fileData.length);
-        
-        for (let i = 0; i < maxBytes; i += 16) {
-            const line = document.createElement('div');
-            line.className = 'hex-line';
-            
-            // Address
-            const address = document.createElement('span');
-            address.className = 'hex-address';
-            address.textContent = i.toString(16).padStart(8, '0').toUpperCase() + ':';
-            line.appendChild(address);
-            
-            // Hex bytes
-            const hexBytes = document.createElement('span');
-            hexBytes.className = 'hex-bytes';
-            let hexString = '';
-            let asciiString = '';
-            
-            for (let j = 0; j < 16 && (i + j) < maxBytes; j++) {
-                const byte = this.fileData[i + j];
-                hexString += byte.toString(16).padStart(2, '0').toUpperCase() + ' ';
-                asciiString += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
-            }
-            
-            hexBytes.textContent = hexString.padEnd(48, ' ');
-            line.appendChild(hexBytes);
-            
-            // ASCII
-            const ascii = document.createElement('span');
-            ascii.className = 'hex-ascii';
-            ascii.textContent = '|' + asciiString + '|';
-            line.appendChild(ascii);
-            
-            this.hexViewer.appendChild(line);
-        }
     }
 
     showFirstBytes() {
