@@ -489,7 +489,7 @@ class PCBFileEditor {
         cancelBtn.style.display = 'none';
     }
 
-    saveFile() {
+    async saveFile() {
         this.addDebugLog('Save button clicked!', 'info');
         
         if (!this.fileData) {
@@ -520,7 +520,15 @@ class PCBFileEditor {
             this.addDebugLog(`Final file size: ${newFileData.length} bytes`, 'info');
             
             // Try to save directly, fallback to download
-            this.saveFileDirectly(newFileData);
+            const saveSuccessful = await this.saveFileDirectly(newFileData);
+            
+            // Update internal file data with the saved data for future operations only if save was successful
+            if (saveSuccessful) {
+                this.fileData = newFileData;
+                this.fileSize = newFileData.length;
+                this.addDebugLog('Internal file data updated with saved changes', 'info');
+                this.updateFileInfo();
+            }
             
         } catch (error) {
             this.addDebugLog(`Error during save: ${error.message}`, 'error');
@@ -570,19 +578,24 @@ class PCBFileEditor {
                 this.addDebugLog(`File saved directly to: ${fileHandle.name}`, 'info');
                 this.addDebugLog('Directory updated for future operations', 'info');
                 
+                return true; // Success
+                
             } catch (error) {
                 if (error.name === 'AbortError') {
                     this.addDebugLog('Save operation cancelled by user', 'info');
+                    return false; // User cancelled
                 } else {
                     this.addDebugLog(`Direct save failed: ${error.message}`, 'warning');
                     // Fallback to download
                     this.downloadFile(fileData);
+                    return true; // Download fallback succeeded
                 }
             }
         } else {
             this.addDebugLog('File System Access API not supported, using download fallback', 'info');
             // Fallback to download for unsupported browsers
             this.downloadFile(fileData);
+            return true; // Download fallback succeeded
         }
     }
 
