@@ -1609,6 +1609,77 @@ class PCBFileEditor {
         this.addDebugLog(`JSON data rebuilt successfully`, 'info');
         return newFileData;
     }
+
+    // Search Methods
+    searchParts(searchTerm) {
+        const partsTable = document.getElementById('partsTable');
+        const tbody = partsTable.querySelector('tbody');
+        const rows = tbody.querySelectorAll('tr');
+
+        searchTerm = searchTerm.toLowerCase().trim();
+
+        rows.forEach(row => {
+            if (!searchTerm) {
+                // Show all rows if search is empty
+                row.style.display = '';
+                return;
+            }
+
+            // Get text content from relevant columns (reference, value, alias)
+            const cells = row.querySelectorAll('td');
+            const reference = cells[0]?.textContent.toLowerCase() || '';
+            const value = cells[1]?.textContent.toLowerCase() || '';
+            const alias = cells[2]?.textContent.toLowerCase() || '';
+            const padName = cells[5]?.textContent.toLowerCase() || '';
+            const padAlias = cells[6]?.textContent.toLowerCase() || '';
+
+            // Check if search term matches any of the relevant fields
+            const matches = reference.includes(searchTerm) || 
+                          value.includes(searchTerm) || 
+                          alias.includes(searchTerm) ||
+                          padName.includes(searchTerm) ||
+                          padAlias.includes(searchTerm);
+
+            row.style.display = matches ? '' : 'none';
+        });
+
+        this.addDebugLog(`Parts search: "${searchTerm}" - ${this.getVisibleRowCount('partsTable')} results`, 'info');
+    }
+
+    searchNets(searchTerm) {
+        const netsTable = document.getElementById('jsonNetsTable');
+        const tbody = netsTable.querySelector('tbody');
+        const rows = tbody.querySelectorAll('tr');
+
+        searchTerm = searchTerm.toLowerCase().trim();
+
+        rows.forEach(row => {
+            if (!searchTerm) {
+                // Show all rows if search is empty
+                row.style.display = '';
+                return;
+            }
+
+            // Get text content from relevant columns (name, alias)
+            const cells = row.querySelectorAll('td');
+            const name = cells[0]?.textContent.toLowerCase() || '';
+            const alias = cells[1]?.textContent.toLowerCase() || '';
+
+            // Check if search term matches any of the relevant fields
+            const matches = name.includes(searchTerm) || alias.includes(searchTerm);
+
+            row.style.display = matches ? '' : 'none';
+        });
+
+        this.addDebugLog(`Nets search: "${searchTerm}" - ${this.getVisibleRowCount('jsonNetsTable')} results`, 'info');
+    }
+
+    getVisibleRowCount(tableId) {
+        const table = document.getElementById(tableId);
+        const tbody = table.querySelector('tbody');
+        const visibleRows = tbody.querySelectorAll('tr:not([style*="display: none"])');
+        return visibleRows.length;
+    }
 }
 
 // Initialize the application when DOM is loaded

@@ -98,6 +98,7 @@
                         <h4>Parts:</h4>
                         <div class="management-controls">
                             <button class="btn-manage" onclick="pcbEditor.addPart()">Add Part</button>
+                            <input type="text" id="partsSearchBox" class="search-box" placeholder="Search parts..." onkeyup="pcbEditor.searchParts(this.value)">
                         </div>
                         <div class="table-container">
                             <table id="partsTable" class="json-table">
@@ -124,6 +125,7 @@
                         <h4>Nets:</h4>
                         <div class="management-controls">
                             <button class="btn-manage" onclick="pcbEditor.addJsonNet()">Add Net</button>
+                            <input type="text" id="netsSearchBox" class="search-box" placeholder="Search nets..." onkeyup="pcbEditor.searchNets(this.value)">
                         </div>
                         <div class="table-container">
                             <table id="jsonNetsTable" class="json-table">
