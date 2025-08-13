@@ -46,6 +46,11 @@ class PCBFileEditor {
         this.validateJsonBtn = document.getElementById('validateJsonBtn');
         this.saveJsonBtn = document.getElementById('saveJsonBtn');
         this.addJsonDataBtn = document.getElementById('addJsonDataBtn');
+        this.showPartsRadio = document.getElementById('showPartsRadio');
+        this.showNetsRadio = document.getElementById('showNetsRadio');
+        this.showBothRadio = document.getElementById('showBothRadio');
+        this.partsSection = document.getElementById('partsSection');
+        this.netsSection = document.getElementById('netsSection');
 
         // Event listeners
         this.openFileBtn.addEventListener('click', () => this.openFileDialog());
@@ -62,12 +67,16 @@ class PCBFileEditor {
         this.validateJsonBtn.addEventListener('click', () => this.validateJson());
         this.saveJsonBtn.addEventListener('click', () => this.saveJsonChanges());
         this.addJsonDataBtn.addEventListener('click', () => this.addJsonData());
+        this.showPartsRadio.addEventListener('change', () => this.toggleJsonSectionView());
+        this.showNetsRadio.addEventListener('change', () => this.toggleJsonSectionView());
+        this.showBothRadio.addEventListener('change', () => this.toggleJsonSectionView());
 
         // Initial state
         this.toggleView();
         this.toggleRawDataView();
         this.toggleJsonDataView();
         this.toggleRawJsonEditorView();
+        this.toggleJsonSectionView();
     }
 
     addDebugLog(message, type = 'info') {
@@ -119,6 +128,27 @@ class PCBFileEditor {
         const showRawJsonEditor = this.rawJsonEditorToggle.checked;
         if (this.jsonRawEditorSection) {
             this.jsonRawEditorSection.style.display = showRawJsonEditor ? 'block' : 'none';
+        }
+    }
+
+    toggleJsonSectionView() {
+        if (!this.partsSection || !this.netsSection) return;
+        
+        if (this.showPartsRadio.checked) {
+            // Show only parts
+            this.partsSection.style.display = 'block';
+            this.netsSection.style.display = 'none';
+            this.addDebugLog('JSON view: Showing Parts only', 'info');
+        } else if (this.showNetsRadio.checked) {
+            // Show only nets
+            this.partsSection.style.display = 'none';
+            this.netsSection.style.display = 'block';
+            this.addDebugLog('JSON view: Showing Nets only', 'info');
+        } else if (this.showBothRadio.checked) {
+            // Show both parts and nets
+            this.partsSection.style.display = 'block';
+            this.netsSection.style.display = 'block';
+            this.addDebugLog('JSON view: Showing Both Parts and Nets', 'info');
         }
     }
 

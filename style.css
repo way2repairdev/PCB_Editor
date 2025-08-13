@@ -110,6 +110,52 @@ body {
     cursor: pointer;
 }
 
+/* Radio Button Styles */
+.radio-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    gap: 8px;
+    margin-right: 15px;
+}
+
+.radio-container input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.radio-checkmark {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #666;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+}
+
+.radio-container input[type="radio"]:checked + .radio-checkmark {
+    border-color: #0e639c;
+    background-color: #0e639c;
+}
+
+.radio-container input[type="radio"]:checked + .radio-checkmark::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.radio-container input[type="radio"] {
+    display: none;
+}
+
 .file-info {
     color: #cccccc;
     font-size: 14px;
@@ -603,7 +649,17 @@ body {
     background-color: #2d2d30;
     border-radius: 4px;
     border: 1px solid #3e3e42;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.json-view-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .json-header-controls .btn {

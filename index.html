@@ -93,53 +93,75 @@
                     <h3>JSON Data:</h3>
                     <div class="json-header-controls">
                         <button id="addJsonDataBtn" class="btn btn-primary" onclick="pcbEditor.addJsonData()" title="Add JSON data structure to the end of the file">Add JSON Data</button>
+                        
+                        <div class="json-view-controls">
+                            <label class="radio-container">
+                                <input type="radio" name="jsonView" id="showPartsRadio" value="parts" checked>
+                                <span class="radio-checkmark"></span>
+                                Show Parts
+                            </label>
+                            <label class="radio-container">
+                                <input type="radio" name="jsonView" id="showNetsRadio" value="nets">
+                                <span class="radio-checkmark"></span>
+                                Show Nets
+                            </label>
+                            <label class="radio-container">
+                                <input type="radio" name="jsonView" id="showBothRadio" value="both">
+                                <span class="radio-checkmark"></span>
+                                Show Both
+                            </label>
+                        </div>
                     </div>
                     <div class="json-container">
-                        <h4>Parts:</h4>
-                        <div class="management-controls">
-                            <button class="btn-manage" onclick="pcbEditor.addPart()">Add Part</button>
-                            <input type="text" id="partsSearchBox" class="search-box" placeholder="Search parts..." onkeyup="pcbEditor.searchParts(this.value)">
-                        </div>
-                        <div class="table-container">
-                            <table id="partsTable" class="json-table">
-                                <thead>
-                                    <tr>
-                                        <th>Reference</th>
-                                        <th>Value</th>
-                                        <th>Alias</th>
-                                        <th>Pads</th>
-                                        <th>Pad Selection</th>
-                                        <th>Pad Name</th>
-                                        <th>Pad Alias</th>
-                                        <th>Diode Reading</th>
-                                        <th>Pad Management</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="partsBody">
-                                    <!-- Parts entries will be populated here -->
-                                </tbody>
-                            </table>
+                        <div id="partsSection">
+                            <h4>Parts:</h4>
+                            <div class="management-controls">
+                                <button class="btn-manage" onclick="pcbEditor.addPart()">Add Part</button>
+                                <input type="text" id="partsSearchBox" class="search-box" placeholder="Search parts..." onkeyup="pcbEditor.searchParts(this.value)">
+                            </div>
+                            <div class="table-container">
+                                <table id="partsTable" class="json-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Reference</th>
+                                            <th>Value</th>
+                                            <th>Alias</th>
+                                            <th>Pads</th>
+                                            <th>Pad Selection</th>
+                                            <th>Pad Name</th>
+                                            <th>Pad Alias</th>
+                                            <th>Diode Reading</th>
+                                            <th>Pad Management</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="partsBody">
+                                        <!-- Parts entries will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         
-                        <h4>Nets:</h4>
-                        <div class="management-controls">
-                            <button class="btn-manage" onclick="pcbEditor.addJsonNet()">Add Net</button>
-                            <input type="text" id="netsSearchBox" class="search-box" placeholder="Search nets..." onkeyup="pcbEditor.searchNets(this.value)">
-                        </div>
-                        <div class="table-container">
-                            <table id="jsonNetsTable" class="json-table">
-                                <thead>
-                                    <tr>
-                                        <th>Net Name</th>
-                                        <th>Alias</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="jsonNetsBody">
-                                    <!-- JSON nets entries will be populated here -->
-                                </tbody>
-                            </table>
+                        <div id="netsSection">
+                            <h4>Nets:</h4>
+                            <div class="management-controls">
+                                <button class="btn-manage" onclick="pcbEditor.addJsonNet()">Add Net</button>
+                                <input type="text" id="netsSearchBox" class="search-box" placeholder="Search nets..." onkeyup="pcbEditor.searchNets(this.value)">
+                            </div>
+                            <div class="table-container">
+                                <table id="jsonNetsTable" class="json-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Net Name</th>
+                                            <th>Alias</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="jsonNetsBody">
+                                        <!-- JSON nets entries will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         
                         <div class="json-raw-editor-section" style="display: none;">
