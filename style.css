@@ -543,6 +543,26 @@ body {
     background-color: #404040;
 }
 
+/* JSON Header Controls Styles */
+.json-header-controls {
+    margin: 10px 0;
+    padding: 8px;
+    background-color: #2d2d30;
+    border-radius: 4px;
+    border: 1px solid #3e3e42;
+    text-align: center;
+}
+
+.json-header-controls .btn {
+    margin: 0;
+}
+
+.json-header-controls .btn:disabled {
+    background-color: #404040;
+    color: #808080;
+    cursor: not-allowed;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .toolbar {

@@ -44,6 +44,7 @@ class PCBFileEditor {
         this.formatJsonBtn = document.getElementById('formatJsonBtn');
         this.validateJsonBtn = document.getElementById('validateJsonBtn');
         this.saveJsonBtn = document.getElementById('saveJsonBtn');
+        this.addJsonDataBtn = document.getElementById('addJsonDataBtn');
 
         // Event listeners
         this.openFileBtn.addEventListener('click', () => this.openFileDialog());
@@ -58,6 +59,7 @@ class PCBFileEditor {
         this.formatJsonBtn.addEventListener('click', () => this.formatJson());
         this.validateJsonBtn.addEventListener('click', () => this.validateJson());
         this.saveJsonBtn.addEventListener('click', () => this.saveJsonChanges());
+        this.addJsonDataBtn.addEventListener('click', () => this.addJsonData());
 
         // Initial state
         this.toggleView();
@@ -790,6 +792,7 @@ class PCBFileEditor {
         if (patternOffset === -1) {
             this.addDebugLog('JSON pattern not found in file (checked both 0D and 0A variants)', 'info');
             this.jsonData = null;
+            this.updateJsonButtonState();
             return;
         }
         
@@ -821,6 +824,9 @@ class PCBFileEditor {
             this.addDebugLog(`Error parsing JSON: ${error.message}`, 'error');
             this.jsonData = null;
         }
+        
+        // Update button state based on JSON availability
+        this.updateJsonButtonState();
     }
 
     findHexPattern(data, pattern) {
@@ -881,6 +887,106 @@ class PCBFileEditor {
         
         // Update nets table
         this.updateJsonNetsTable();
+    }
+
+    updateJsonButtonState() {
+        if (this.addJsonDataBtn) {
+            if (this.jsonData) {
+                // JSON data exists - disable button
+                this.addJsonDataBtn.disabled = true;
+                this.addJsonDataBtn.title = 'JSON data already exists in this file';
+                this.addDebugLog('Add JSON Data button disabled - JSON data already exists', 'info');
+            } else {
+                // No JSON data - enable button
+                this.addJsonDataBtn.disabled = false;
+                this.addJsonDataBtn.title = 'Add JSON data structure to the end of the file';
+                this.addDebugLog('Add JSON Data button enabled - no JSON data found', 'info');
+            }
+        }
+    }
+
+    addJsonData() {
+        if (!this.fileData) {
+            this.addDebugLog('No file loaded to add JSON data to!', 'error');
+            alert('Please load a PCB file first.');
+            return;
+        }
+
+        if (this.jsonData) {
+            this.addDebugLog('JSON data already exists in this file!', 'warning');
+            alert('JSON data already exists in this file.');
+            return;
+        }
+
+        // Confirm with user
+        if (!confirm('Add JSON data structure to the end of this file?\n\nThis will add a hex pattern followed by an empty JSON structure with sample data.')) {
+            return;
+        }
+
+        this.addDebugLog('Adding JSON data to file...', 'info');
+
+        // Create default JSON structure
+        const defaultJsonData = {
+            part: [
+                {
+                    reference: "U1",
+                    value: "IC",
+                    alias: "Chip1",
+                    pad: [
+                        {
+                            name: "1",
+                            alias: "A1",
+                            diode: "0"
+                        }
+                    ]
+                }
+            ],
+            net: [
+                {
+                    name: "NET1",
+                    alias: "Signal1"
+                }
+            ]
+        };
+
+        const jsonString = JSON.stringify(defaultJsonData, null, 2);
+        const jsonBytes = new TextEncoder().encode(jsonString);
+
+        // Create the hex pattern: 3D 3D 3D 50 43 42 B8 BD BC D3 0D
+        const hexPattern = new Uint8Array([0x3D, 0x3D, 0x3D, 0x50, 0x43, 0x42, 0xB8, 0xBD, 0xBC, 0xD3, 0x0D]);
+
+        // Create new file data with hex pattern + JSON at the end
+        const newFileSize = this.fileData.length + hexPattern.length + jsonBytes.length;
+        const newFileData = new Uint8Array(newFileSize);
+
+        // Copy original file data
+        newFileData.set(this.fileData, 0);
+
+        // Add hex pattern
+        newFileData.set(hexPattern, this.fileData.length);
+
+        // Add JSON data
+        newFileData.set(jsonBytes, this.fileData.length + hexPattern.length);
+
+        // Update internal file data
+        this.fileData = newFileData;
+        this.fileSize = newFileData.length;
+
+        this.addDebugLog(`Added JSON data to file. New file size: ${newFileSize} bytes`, 'info');
+        this.addDebugLog(`Hex pattern added at offset: ${this.fileData.length - hexPattern.length - jsonBytes.length}`, 'info');
+        this.addDebugLog(`JSON data added at offset: ${this.fileData.length - jsonBytes.length}`, 'info');
+
+        // Re-parse JSON data to update the UI
+        this.parseJsonData();
+
+        // Enable save button
+        this.saveFileBtn.disabled = false;
+
+        // Update file info
+        this.updateFileInfo();
+
+        this.addDebugLog('JSON data structure added successfully!', 'info');
+        alert('JSON data structure has been added to the file.\n\nYou can now edit the parts and nets, and save the file.');
     }
 
     updatePartsTable() {
