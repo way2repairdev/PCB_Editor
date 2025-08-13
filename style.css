@@ -239,6 +239,38 @@ body {
     background-color: #2a2d2e;
 }
 
+/* JSON Table Styles */
+.json-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1e1e1e;
+}
+
+.json-table th {
+    background-color: #2d2d30;
+    color: #ffffff;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #3e3e42;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.json-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2d2d30;
+    color: #cccccc;
+}
+
+.json-table tr:nth-child(even) {
+    background-color: #252526;
+}
+
+.json-table tr:hover {
+    background-color: #2a2d2e;
+}
+
 /* Hex Section Styles */
 .hex-section {
     margin-top: 20px;
